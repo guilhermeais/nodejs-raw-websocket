@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Socket Client | Guilherme Teixeira Ais</title>
+</head>
+<body>
+  <output id="messages"></output>
+  <script>
+    const messages = document.getElementById('messages');
+    const socket = new WebSocket('ws://localhost:1337');
+    socket.onopen = (event) => console.log('WebSocket is connected.');
+    socket.onmessage = (message) => console.log('Message received from WebSocket server: ', message);
+    socket.onerror = (error) => console.log('WebSocket Error.', error);
+    socket.onclose = (event) => console.log('Disconnected from WebSocket server.');
+  </script>
+</body>
+</html>
