@@ -6,6 +6,7 @@ const SEVEN_BITS_INTEGER_MARKER = 125
 const SIXTEEN_BITS_INTEGER_MARKER = 126
 const SIXTYFOUR_BITS_INTEGER_MARKER = 127
 
+const MAXIMUM_SIXTEENBITS_INTEGER = 2 ** 16 // 0 TO 65536 
 const MASK_KEY_BYTES_LENGTH = 4 
 const OPCODE_TEXT = 0x01 // 1 bit in binary 1
 
@@ -38,7 +39,6 @@ function prepareMessage(message) {
   const msgLength = msg.length
   
   let dataFrameBuffer;
-  let offset = 2;
 
   // 0x80 === 128 in binary
   // '0x' + Math.abs(128).toString(16) === '0x80'
@@ -47,7 +47,24 @@ function prepareMessage(message) {
     // 16 bits or less -> 1 byte
    const bytes = [firstByte]
    dataFrameBuffer = Buffer.from(bytes.concat(msgLength))
-  }else{
+  }
+  else if (msgLength <= MAXIMUM_SIXTEENBITS_INTEGER) {
+    const offsetFourBytes = 4
+    const target = Buffer.allocUnsafe(offsetFourBytes)
+    target[0] = firstByte
+    target[1] = SIXTEEN_BITS_INTEGER_MARKER | 0x0 // just to know the mask indicator
+
+    target.writeUInt16BE(msgLength, 2) // content length is 2 bytes
+    dataFrameBuffer = target
+
+    // so, what we do:
+    // alloc 4 empty bytes
+    // then write the first byte at [0] position, which is 129 = 0x81 that is the fin + opcode.
+    // then, at [1] position, write the payload length marker + mask indicator, which is 126 + 0 = 0x7E
+    // then, at [2, 3] position, write the content length, which is splited in 2 bytes
+    // then, at [4 - ...] position, write the message itself
+  }
+  else{
     throw new Error('message too long!')
   }
 
@@ -57,10 +74,14 @@ function prepareMessage(message) {
 }
 
 function concat(bufferList, totalLength) {
+  // create a empty buffer with the total length of the message
   const target = Buffer.allocUnsafe(totalLength)
   let offset = 0;
+  // loop through the bufferList and copy the content to the target buffer
   for (const buffer of bufferList) {
+    // copy the buffer to the target buffer, the offset is the position of the target buffer
     target.set(buffer, offset)
+    // increase the offset by the length of the buffer, so the next buffer will be copied at the next position
     offset += buffer.length
   }
 
@@ -80,7 +101,12 @@ function onSocketReadable(socket) {
   if(lengthIndicatorBits <= SEVEN_BITS_INTEGER_MARKER) {
     // 7 bits or less -> 1 byte
     messageLength = lengthIndicatorBits
-  } else { 
+  } 
+  else if (lengthIndicatorBits === SIXTEEN_BITS_INTEGER_MARKER) {
+    // unsigned, big-endian 16-bit integer 0 - 65k (16 bits) -> 2 ** 16
+    messageLength = socket.read(2).readUInt16BE(0)
+  }
+  else { 
    throw new Error(`you message is too long! for now we don't handle 64 bits message`)
   }
 
