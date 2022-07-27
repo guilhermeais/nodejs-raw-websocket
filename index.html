@@ -1,39 +1,80 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Web Socket Client | Guilherme Teixeira Ais</title>
-</head>
-<body>
-  <h3>Messages:</h3>
-  <output id="messages"></output>
-  <script>
-    const messages = document.getElementById('messages');
-    const socket = new WebSocket('ws://localhost:1337');
-    socket.onopen = (event) => {
-      console.log('WebSocket is connected.');
-      const id = Math.round(Math.random() * 100000);
-      const data = JSON.stringify({
-        id,
-        name: 'Guilherme Teixeira',
-        address: {
-          street: 'Rua dos Bobos',
-          number: 9800,
-        },
-        profession: 'developer'
-      })
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Socket Client | Guilherme Teixeira Ais</title>
+  </head>
+  <body>
+    <h3>Messages:</h3>
+    <output id="messages"></output>
+    <script>
+      const messages = document.getElementById('messages')
+      const socket = new WebSocket('ws://localhost:1337')
+      socket.onopen = event => {
+        console.log('WebSocket is connected.')
+        const id = Math.round(Math.random() * 100000)
+        const data = JSON.stringify([
+          {
+            id,
+            name: 'Guilherme Teixeira',
+            address: [
+              {
+                street: 'Rua dos Bobos',
+                number: 9800,
+              },
+              {
+                street: 'Rua dos Bobos',
+                number: 9800,
+              },
+              {
+                street: 'Rua dos Bobos',
+                number: 9800,
+              },
+              {
+                street: 'Rua dos Bobos',
+                number: 9800,
+              },
+            ],
+            profession: 'developer',
+          },
+          {
+            id,
+            name: 'Guilherme Teixeira',
+            address: [
+              {
+                street: 'Rua dos Bobos',
+                number: 9800,
+              },
+              {
+                street: 'Rua dos Bobos',
+                number: 9800,
+              },
+              {
+                street: 'Rua dos Bobos',
+                number: 9800,
+              },
+              {
+                street: 'Rua dos Bobos',
+                number: 9800,
+              },
+            ],
+            profession: 'developer',
+          },
+        ])
 
-      socket.send(data)
-    }
-    socket.onmessage = (message) => {
-      console.log('Message received from WebSocket server: ', message)
-      messages.innerHTML+= '<br/>'
-      messages.innerHTML += `<p>${message.data}</p>`
-    }
-    socket.onerror = (error) => console.log('WebSocket Error.', error);
-    socket.onclose = (event) => console.log('Disconnected from WebSocket server.');
-  </script>
-</body>
+        const intervalId = setInterval(() => socket.send(data), 1000)
+        setTimeout(() => clearInterval(intervalId), 5000)
+      }
+      socket.onmessage = message => {
+        console.log('Message received from WebSocket server: ', message)
+        messages.innerHTML += '<br/>'
+        messages.innerHTML += `<p>${message.data}</p>`
+      }
+      socket.onerror = error => console.log('WebSocket Error.', error)
+      socket.onclose = event =>
+        console.log('Disconnected from WebSocket server.')
+    </script>
+  </body>
 </html>
