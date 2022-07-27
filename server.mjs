@@ -7,6 +7,7 @@ const SIXTEEN_BITS_INTEGER_MARKER = 126
 const SIXTYFOUR_BITS_INTEGER_MARKER = 127
 
 const MASK_KEY_BYTES_LENGTH = 4 
+const OPCODE_TEXT = 0x01 // 1 bit in binary 1
 
 const FIRST_BIT = 128 // One bit
 
@@ -28,10 +29,44 @@ function onSocketUpgrade(request, socket, head) {
   socket.on('readable', () => onSocketReadable(socket))
 }
 
-/**
- * 
- * @param {import('stream').Duplex} socket 
- */
+function sendMessage(msg, socket) {
+  socket.write(prepareMessage(msg))  
+}
+
+function prepareMessage(message) {
+  const msg = Buffer.from(message)
+  const msgLength = msg.length
+  
+  let dataFrameBuffer;
+  let offset = 2;
+
+  // 0x80 === 128 in binary
+  // '0x' + Math.abs(128).toString(16) === '0x80'
+  const firstByte = 0x80 | OPCODE_TEXT // single frame + text
+  if (msgLength <= SIXTEEN_BITS_INTEGER_MARKER) {
+    // 16 bits or less -> 1 byte
+   const bytes = [firstByte]
+   dataFrameBuffer = Buffer.from(bytes.concat(msgLength))
+  }else{
+    throw new Error('message too long!')
+  }
+
+  const totalLength = dataFrameBuffer.byteLength + msgLength
+  const dataFrameResponse = concat([dataFrameBuffer, msg], totalLength)
+  return dataFrameResponse
+}
+
+function concat(bufferList, totalLength) {
+  const target = Buffer.allocUnsafe(totalLength)
+  let offset = 0;
+  for (const buffer of bufferList) {
+    target.set(buffer, offset)
+    offset += buffer.length
+  }
+
+  return target
+}
+
 function onSocketReadable(socket) {
   // consume optcode (first byte)
   // 1 -> 1 byte - 8 bits
@@ -55,9 +90,15 @@ function onSocketReadable(socket) {
   const received = decoded.toString('utf-8')
   
   const data = JSON.parse(received)
-  console.log(data);
+
+  const msg = JSON.stringify({
+    message: data,
+    at: new Date().toISOString() 
+  })
+
+  sendMessage(msg, socket)
 }
-(1).toString()
+
 function unMask(encodedBuffer, maskKey) {
   const finalBuffer = Buffer.from(encodedBuffer)
   // because the mask key has only 4 bytes
